@@ -105,6 +105,27 @@ final class ArcanistESLintLinter extends ArcanistExternalLinter {
         return true;
     }
 
+    protected function getDefaultMessageSeverity($code) {
+        // since severity is provided in the output, here
+        // we simply output `NULL` so the output result could
+        // be used
+        return NULL;
+    }
+
+    protected function getESLintMessageSeverity($code, $outputtedSeverity) {
+        // allow overwrite through config
+        $severityWithCode = $this->getLintMessageSeverity($code);
+
+        if (!is_null($severityWithCode)) {
+            return $severityWithCode;
+        }
+
+        // did not overwrite, output the original severity
+        return $outputtedSeverity === 'error' ?
+            ArcanistLintSeverity::SEVERITY_ERROR :
+            ArcanistLintSeverity::SEVERITY_WARNING;
+    }
+
     protected function parseLinterOutput($path, $err, $stdout, $stderr) {
         $lines = phutil_split_lines($stdout, false);
 
@@ -116,20 +137,20 @@ final class ArcanistESLintLinter extends ArcanistExternalLinter {
 
             if (isset($parts[1]) &&
                 ($parts[1] === 'error' || $parts[1] === 'warning')) {
-                $severity = $parts[1] === 'error' ?
-                    ArcanistLintSeverity::SEVERITY_ERROR :
-                    ArcanistLintSeverity::SEVERITY_WARNING;
 
                 list($line, $char) = explode(':', $parts[0]);
+                $severity = $parts[1];
+                $code = end($parts);
+                $description = implode(' ', array_slice($parts, 2, count($parts) - 3));
 
                 $message = new ArcanistLintMessage();
                 $message->setPath($path);
                 $message->setLine($line);
                 $message->setChar($char);
-                $message->setCode($this->getLinterName());
+                $message->setCode($code);
                 $message->setName($this->getLinterName());
-                $message->setDescription(implode(' ', $parts));
-                $message->setSeverity($severity);
+                $message->setDescription($description);
+                $message->setSeverity($this->getESLintMessageSeverity($code, $severity));
 
                 $messages[] = $message;
             }
