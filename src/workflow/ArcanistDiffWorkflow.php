@@ -1815,12 +1815,7 @@ EOTEXT
     }
 
     $reviewers = $message->getFieldValue('reviewerPHIDs');
-    if (!$reviewers) {
-      $confirm = pht('You have not specified any reviewers. Continue anyway?');
-      if (!phutil_console_confirm($confirm)) {
-        throw new ArcanistUsageException(pht('Specify reviewers and retry.'));
-      }
-    } else {
+    if ($reviewers) {
       $futures['reviewers'] = $this->getConduit()->callMethod(
         'user.query',
         array(
@@ -2591,10 +2586,6 @@ EOTEXT
     foreach ($need_upload as $key => $spec) {
       $change = $need_upload[$key]['change'];
 
-      $type = $spec['type'];
-      $size = strlen($spec['data']);
-
-      $change->setMetadata("{$type}:file:size", $size);
       if ($spec['data'] === null) {
         // This covers the case where a file was added or removed; we don't
         // need to upload the other half of it (e.g., the old file data for
@@ -2603,6 +2594,11 @@ EOTEXT
         unset($need_upload[$key]);
         continue;
       }
+
+      $type = $spec['type'];
+      $size = strlen($spec['data']);
+
+      $change->setMetadata("{$type}:file:size", $size);
 
       $mime = $this->getFileMimeType($spec['data']);
       if (preg_match('@^image/@', $mime)) {
