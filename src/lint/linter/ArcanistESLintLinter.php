@@ -59,7 +59,7 @@ final class ArcanistESLintLinter extends ArcanistExternalLinter {
   protected function getMandatoryFlags() {
     $options = array();
 
-    $options[] = '--format=stylish';
+    $options[] = '--format=json';
 
     if ($this->eslintenv) {
       $options[] = '--env='.$this->eslintenv;
@@ -121,42 +121,49 @@ final class ArcanistESLintLinter extends ArcanistExternalLinter {
     }
 
     // did not overwrite, output the original severity
-    return $outputtedSeverity === 'error' ?
+    return $outputtedSeverity === 2 ?
       ArcanistLintSeverity::SEVERITY_ERROR :
       ArcanistLintSeverity::SEVERITY_WARNING;
   }
 
   protected function parseLinterOutput($path, $err, $stdout, $stderr) {
-    $lines = phutil_split_lines($stdout, false);
+    $fileResults = json_decode($stdout);
+    $code = $this->engine->loadData($path);
 
     $messages = array();
-    foreach ($lines as $line) {
-      // Clean up nasty ESLint output
-      $clean_line = $output = preg_replace('!\s+!', ' ', $line);
-      $parts = explode(' ', ltrim($clean_line));
-
-      if (isset($parts[1]) &&
-        ($parts[1] === 'error' || $parts[1] === 'warning')) {
-
-        list($line, $char) = explode(':', $parts[0]);
-        $severity = $parts[1];
-        $code = end($parts);
-        $description = implode(' ', array_slice($parts, 2, count($parts) - 3));
-
+    foreach ($fileResults as $fileResult) {
+      foreach ($fileResult->messages as $eslintMessage) {
         $message = new ArcanistLintMessage();
         $message->setPath($path);
-        $message->setLine($line);
-        $message->setChar($char);
-        $message->setCode($code);
+        $message->setLine($eslintMessage->line);
+        $message->setChar($eslintMessage->column);
+        $message->setCode($eslintMessage->ruleId);
         $message->setName($this->getLinterName());
-        $message->setDescription($description);
-        $message->setSeverity($this->getESLintMessageSeverity($code, $severity));
+        $message->setDescription($eslintMessage->message);
+        $message->setSeverity(
+          $this->getESLintMessageSeverity(
+            $eslintMessage->ruleId, $eslintMessage->severity
+          )
+        );
+
+        if (array_key_exists('fix', $eslintMessage)) {
+          $replaceRange = $eslintMessage->fix->range;
+          $replaceStart = $replaceRange[0];
+          $replaceLen = $replaceRange[1] - $replaceRange[0];
+          $message->setOriginalText(substr($code, $replaceStart, $replaceLen));
+          $message->setReplacementText($eslintMessage->fix->text);
+
+          // Override line and column, since the patcher expects that to be the
+          // start of the replacement.
+          list($line, $char) =
+            $this->engine->getLineAndCharFromOffset($path, $replaceStart);
+          $message->setLine($line + 1);
+          $message->setChar($char + 1);
+        }
 
         $messages[] = $message;
       }
     }
-
     return $messages;
   }
-
 }
