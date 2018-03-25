@@ -1,5 +1,15 @@
 <?php
 /*
+
+Taken from https://github.com/material-foundation/arc-tslint/blob/develop/lint/linter/TypescriptLinter.php
+
+Modifications:
+* Add autofixing when the error has exactly one fix.
+* All problems should be marked as errors, not warnings.
+* Use -> syntax to be consistent with ArcanistESLintLinter.
+
+Original copyright notice:
+
  Copyright 2016-present The Material Motion Authors. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +25,7 @@
  limitations under the License.
  */
 
-/** Uses tslint to lint typescript */
-final class TypescriptLinter extends ArcanistExternalLinter {
-
+final class ArcanistTSLintLinter extends ArcanistExternalLinter {
   private $project = null;
 
   public function getInfoName() {
@@ -50,10 +58,6 @@ final class TypescriptLinter extends ArcanistExternalLinter {
 
   public function shouldExpectCommandErrors() {
     return false;
-  }
-
-  protected function getDefaultMessageSeverity($code) {
-    return ArcanistLintSeverity::SEVERITY_WARNING;
   }
 
   public function getVersion() {
@@ -103,17 +107,33 @@ final class TypescriptLinter extends ArcanistExternalLinter {
   }
 
   protected function parseLinterOutput($path, $err, $stdout, $stderr) {
-    $output = json_decode($stdout, TRUE);
+    $code = $this->engine->loadData($path);
+    $output = json_decode($stdout);
     $messages = array();
     foreach ($output as $warning) {
-      $messages []= id(new ArcanistLintMessage())
-        ->setPath($path)
-        ->setLine($warning['startPosition']['line'] + 1)
-        ->setChar($warning['startPosition']['character'] + 1)
-        ->setCode($warning['ruleName'])
-        ->setSeverity($this->getLintMessageSeverity($warning['ruleName']))
-        ->setName('tslint violation')
-        ->setDescription($warning['failure']);
+      $message = new ArcanistLintMessage();
+      $message->setPath($path);
+      $message->setLine($warning->startPosition->line + 1);
+      $message->setChar($warning->startPosition->character + 1);
+      $message->setCode($warning->ruleName);
+      $message->setSeverity($this->getLintMessageSeverity($warning->ruleName));
+      $message->setName('tslint violation');
+      $message->setDescription($warning->failure);
+
+      if (array_key_exists('fix', $warning) && count($warning->fix) == 1) {
+        $replaceStart = $warning->fix[0]->innerStart;
+        $replaceLen = $warning->fix[0]->innerLength;
+        $message->setOriginalText(substr($code, $replaceStart, $replaceLen));
+        $message->setReplacementText($warning->fix[0]->innerText);
+
+        // Override line and column, since the patcher expects that to be the
+        // start of the replacement.
+        list($line, $char) =
+          $this->engine->getLineAndCharFromOffset($path, $replaceStart);
+        $message->setLine($line + 1);
+        $message->setChar($char + 1);
+      }
+      $messages[] = $message;
     }
     return $messages;
   }
