@@ -23,7 +23,7 @@ final class TypeScriptTestEngine extends ArcanistUnitTestEngine {
     } else {
       $result->setResult(ArcanistUnitTestResult::RESULT_PASS);
     }
-    $result->setUserData(join('\n', $output));
+    $result->setUserData(join("\n", $output));
     $result->setDuration($time_taken_seconds);
     return array($result);
   }
