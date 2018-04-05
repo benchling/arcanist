@@ -27,7 +27,7 @@ final class ArcanistESLintLinter extends ArcanistExternalLinter {
   }
 
   public function getVersion() {
-    $output = exec('./node_modules/.bin/eslint --version');
+    $output = exec(sprintf("%s --version", $this->getBinary()));
 
     if (strpos($output, 'command not found') !== false) {
       return false;

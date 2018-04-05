@@ -10,8 +10,10 @@ final class TypeScriptTestEngine extends ArcanistUnitTestEngine {
   }
 
   public function run() {
+    $root = $this->getWorkingCopy()->getProjectRoot();
+    $tsc = Filesystem::resolvePath('./node_modules/.bin/tsc', $root);
     $time_start_seconds = microtime(true);
-    exec('./node_modules/.bin/tsc --project . --noEmit', $output, $return_var);
+    exec(sprintf("%s --project %s --noEmit", $tsc, $root), $output, $return_var);
     $time_taken_seconds = microtime(true) - $time_start_seconds;
 
     $result = new ArcanistUnitTestResult();
