@@ -413,6 +413,7 @@ phutil_register_library_map(array(
     'ArcanistXMLLinter' => 'lint/linter/ArcanistXMLLinter.php',
     'ArcanistXMLLinterTestCase' => 'lint/linter/__tests__/ArcanistXMLLinterTestCase.php',
     'ArcanistXUnitTestResultParser' => 'unit/parser/ArcanistXUnitTestResultParser.php',
+    'BenchlingCheckTestEngine' => 'unit/engine/BenchlingCheckTestEngine.php',
     'CSharpToolsTestEngine' => 'unit/engine/CSharpToolsTestEngine.php',
     'NoseTestEngine' => 'unit/engine/NoseTestEngine.php',
     'PhpunitTestEngine' => 'unit/engine/PhpunitTestEngine.php',
@@ -428,7 +429,10 @@ phutil_register_library_map(array(
     'XUnitTestEngine' => 'unit/engine/XUnitTestEngine.php',
     'XUnitTestResultParserTestCase' => 'unit/parser/__tests__/XUnitTestResultParserTestCase.php',
   ),
-  'function' => array(),
+  'function' => array(
+    'isTypeScript' => 'unit/engine/TypeScriptTestEngine.php',
+    'quote' => 'unit/engine/BenchlingCheckTestEngine.php',
+  ),
   'xmap' => array(
     'ArcanistAbstractMethodBodyXHPASTLinterRule' => 'ArcanistXHPASTLinterRule',
     'ArcanistAbstractMethodBodyXHPASTLinterRuleTestCase' => 'ArcanistXHPASTLinterRuleTestCase',
@@ -834,6 +838,7 @@ phutil_register_library_map(array(
     'ArcanistXMLLinter' => 'ArcanistLinter',
     'ArcanistXMLLinterTestCase' => 'ArcanistLinterTestCase',
     'ArcanistXUnitTestResultParser' => 'Phobject',
+    'BenchlingCheckTestEngine' => 'ArcanistUnitTestEngine',
     'CSharpToolsTestEngine' => 'XUnitTestEngine',
     'NoseTestEngine' => 'ArcanistUnitTestEngine',
     'PhpunitTestEngine' => 'ArcanistUnitTestEngine',
